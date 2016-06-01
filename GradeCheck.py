@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
 # import needed libraries
-import mechanize, os, time, random
+import mechanize
 from bs4 import BeautifulSoup
 
 
 # A class to manage information flow
 class Scrape:
-    def __init__(self):
+    def __init__(self, exceptions):
         # Instantiate an empty browser holder
         self.br = None
+        # Declare and store exception courses
+        self.exceptions = exceptions
         # Store root url in shortcut variable as it's going to be use a lot
         self.root_url = "https://uos.sharjah.ac.ae:9050/prod_enUS"
 
@@ -35,31 +37,59 @@ class Scrape:
         self.br.submit()
 
     # Returns student's Active Registrations
-    def grab_active_regs(self):
-        # Enter Student > Registration section
-        self.br.open(self.root_url + "/twbkwbis.P_GenMenu?name=bmenu.P_RegMnu")
-        # Enter Active Registration page
-        self.br.follow_link(url="/prod_enUS/bwsksreg.p_active_regs")
-        # Return raw html
+    def get_transcript(self):
+        # Enter Student > Student Records section
+        self.br.open(self.root_url + "/twbkwbis.P_GenMenu?name=bmenu.P_AdminMnu")
+        # Enter Academic Transcript page
+        self.br.follow_link(url="/prod_enUS/bwskotrn.P_ViewTermTran")
+        # Go on and submit
+        self.br.select_form(nr=1)
+        self.br.submit()
+        # Put page in a soup and store it in transcript
         return self.br.response().read()
 
-    # Notify me whether course mark are out or not
-    def notify_me(self, course):
-        # If course is still in the Active Registrations
-        if BeautifulSoup(self.grab_active_regs(), "lxml").body.find(text=course) is None:
-            # Notify me that course marks are out
-            os.system("spd-say \"" + course.split(" - ")[0] + " Marks Are Out!\"")
-            print(course.split(" - ")[0] + " Marks Are Out!")
-        else:
-            print("Last checked: " + time.strftime("%I:%M:%S"))
+    # Loop through Transcript page checking for grades
+    def check_grades(self):
+        # Get Transcript page and put it in a soup
+        soup = BeautifulSoup(self.get_transcript(), "lxml")
+        # Initialize a flag for when loop is inside needed area
+        inside = False
+        # Loop through all html tr tags in soup
+        for tr in soup.body.find("table", class_="datadisplaytable").find_all("tr"):
+            # Make sure th tag isn't None
+            if tr.th is not None:
+                # When it reaches "Spring 2015-2016"
+                if tr.th.text == "Term: Spring 2015-2016":
+                    # This is where needed area starts
+                    inside = True
+                # when it reaches "Term Totals"
+                elif inside and tr.th.text == "Term Totals (Undergraduate)":
+                    # This is where needed area ends
+                    break
+            # If it's inside needed area and it's a course "tr" (because of having "td")
+            if inside and tr.find().name == "td":
+                # Notify me if a new course grade is out :)
+                self.notify_if_new_grade(tr.find_all())
+
+    # Notify me if "td" tags contain a new grade
+    def notify_if_new_grade(self, tds):
+        # Loop through all exception courses
+        for exception in self.exceptions:
+            # Only notify if the course isn't an exception
+            if exception == tds[4].text:
+                return
+        # Notify me that a new course Grade is out
+        os.system("say '" + tds[4].text + " Grade is: " + tds[5].text + "'")
+        print(tds[4].text + " Grade is: " + tds[5].text)
 
 
-scrape = Scrape()
-
-scrape.login("", "")
+import os, time, random
+scrape = Scrape([])
 
 while True:
-    scrape.notify_me("")
-    time.sleep(random.uniform(900, 1800))
     os.system("reset")
+    scrape.login("", "")
+    scrape.check_grades()
+    print("Last checked: " + time.strftime("%I:%M:%S"))
+    time.sleep(random.uniform(900, 1800))
 
