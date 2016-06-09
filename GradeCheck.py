@@ -49,7 +49,7 @@ class Scrape:
         return self.br.response().read()
 
     # Loop through Transcript page checking for grades
-    def check_grades(self):
+    def check_grades(self, semester):
         # Get Transcript page and put it in a soup
         soup = BeautifulSoup(self.get_transcript(), "lxml")
         # Initialize a flag for when loop is inside needed area
@@ -58,8 +58,8 @@ class Scrape:
         for tr in soup.body.find("table", class_="datadisplaytable").find_all("tr"):
             # Make sure th tag isn't None
             if tr.th is not None:
-                # When it reaches "Spring 2015-2016"
-                if tr.th.text == "Term: Spring 2015-2016":
+                # When it reaches the chosen term
+                if tr.th.text == semester:
                     # This is where needed area starts
                     inside = True
                 # when it reaches "Term Totals"
@@ -73,23 +73,35 @@ class Scrape:
 
     # Notify me if "td" tags contain a new grade
     def notify_if_new_grade(self, tds):
+        # Get course name from the 4th column
+        course = tds[4].text
+        # Get course grade from the 5th column
+        grade = tds[5].text
         # Loop through all exception courses
         for exception in self.exceptions:
             # Only notify if the course isn't an exception
-            if exception == tds[4].text:
+            if exception == course:
                 return
         # Notify me that a new course Grade is out
-        os.system("say '" + tds[4].text + " Grade is: " + tds[5].text + "'")
-        print(tds[4].text + " Grade is: " + tds[5].text)
+        # By reading it with text to speech
+        os.system("say '" + course + " Grade is: " + grade + "'")
+        # By sending it a ubuntu desktop notification
+        os.system("notify-send 'Your Grade Is: " + grade + "' 'In " + course + "'")
+        # By printing it to the console
+        print(course + " Grade is: " + grade)
 
 
 import os, time, random
-scrape = Scrape([])
+from Data import *
+
+scrape = Scrape(known_courses)
 
 while True:
     os.system("reset")
-    scrape.login("", "")
-    scrape.check_grades()
+    try:
+        scrape.login(username, password)
+        scrape.check_grades(term)
+    except:
+        print("Error Occurred")
     print("Last checked: " + time.strftime("%I:%M:%S"))
-    time.sleep(random.uniform(900, 1800))
-
+    time.sleep(random.uniform(500, 750))
