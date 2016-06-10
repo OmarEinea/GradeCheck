@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=Grade Check
+Exec=gnome-terminal --window-with-profile="command" -x sh -c 'python ~/Desktop/Documents/Python/GradeCheck/GradeCheck.py'
+Type=Application
+X-GNOME-Autostart-enabled=true
