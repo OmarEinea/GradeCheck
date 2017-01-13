@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
 # import needed libraries
-import mechanize, os
+from sys import platform
+from os import system as run
 from bs4 import BeautifulSoup
-
+from mechanize import Browser, _http
+from Tkinter import Tk
+from tkMessageBox import showinfo as msg
 
 # A class to manage information flow
 class Scrape:
@@ -14,16 +17,19 @@ class Scrape:
         self.exceptions = exceptions
         # Store root url in shortcut variable as it's going to be use a lot
         self.root_url = "https://uos.sharjah.ac.ae:9050/prod_enUS"
+        # Initialize Tkinter message boxes
+        Tk().withdraw()
 
     def initialize(self):
+        run("cls") if platform == "win32" else run("reset")
         # Instantiate mechanize browser
-        self.br = mechanize.Browser()
+        self.br = Browser()
         # Browser options
         self.br.set_handle_equiv(True)
         self.br.set_handle_redirect(True)
         self.br.set_handle_referer(True)
         self.br.set_handle_robots(False)
-        self.br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
+        self.br.set_handle_refresh(_http.HTTPRefreshProcessor(), max_time=1)
 
     # Login to official UOS UDC
     def login(self, sid, pin):
@@ -59,7 +65,7 @@ class Scrape:
             # Make sure th tag isn't None
             if tr.th is not None:
                 # When it reaches the chosen term
-                if tr.th.text == semester:
+                if tr.th.text == "Term: " + semester:
                     # This is where needed area starts
                     inside = True
                 # when it reaches "Term Totals"
@@ -84,8 +90,9 @@ class Scrape:
                 return
         # Notify me that a new course Grade is out
         # By reading it with text to speech
-        os.system("say '" + course + " Grade is: " + grade + "'")
-        # By sending it a ubuntu desktop notification
-        os.system("notify-send 'Your Grade Is: " + grade + "' 'In " + course + "'")
+        if platform != "win32":
+            run("say '" + course + " Grade is: " + grade + "'")
         # By printing it to the console
         print(course + " Grade is: " + grade)
+        # By Displaying a message box
+        msg("New Course Grade Is Out!", course + " Grade is: " + grade)

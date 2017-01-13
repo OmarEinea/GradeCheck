@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
-import os, time, random
+import time, random
 from Scrape import Scrape
 from Data import *
 
 scrape = Scrape(known_courses)
 
 while True:
-    os.system("reset")
     try:
         scrape.login(username, password)
         scrape.check_grades(term)
